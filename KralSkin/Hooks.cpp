@@ -19,6 +19,32 @@
 
 LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+inline void nextSkin() noexcept
+{
+	if (const auto player{ cheatManager.memory->localPlayer }; player) {
+		const auto& values{ cheatManager.database->champions_skins[fnv::hash_runtime(player->get_character_data_stack()->base_skin.model.str)] };
+		cheatManager.config->current_combo_skin_index++;
+		if (cheatManager.config->current_combo_skin_index > static_cast<std::int32_t>(values.size()))
+			cheatManager.config->current_combo_skin_index = static_cast<std::int32_t>(values.size());
+		if (cheatManager.config->current_combo_skin_index > 0)
+			player->change_skin(values[cheatManager.config->current_combo_skin_index - 1].model_name.c_str(), values[cheatManager.config->current_combo_skin_index - 1].skin_id);
+		cheatManager.config->save();
+	}
+}
+
+inline void previousSkin() noexcept
+{
+	if (const auto player{ cheatManager.memory->localPlayer }; player) {
+		const auto& values{ cheatManager.database->champions_skins[fnv::hash_runtime(player->get_character_data_stack()->base_skin.model.str)] };
+		cheatManager.config->current_combo_skin_index--;
+		if (cheatManager.config->current_combo_skin_index > 0)
+			player->change_skin(values[cheatManager.config->current_combo_skin_index - 1].model_name.c_str(), values[cheatManager.config->current_combo_skin_index - 1].skin_id);
+		else
+			cheatManager.config->current_combo_skin_index = 1;
+		cheatManager.config->save();
+	}
+}
+
 static LRESULT WINAPI wndProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) noexcept
 {
 	if (::ImGui_ImplWin32_WndProcHandler(window, msg, wParam, lParam))
@@ -30,49 +56,11 @@ static LRESULT WINAPI wndProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPara
 			cheatManager.config->save();
 	}
 
-	if (msg == WM_KEYDOWN && wParam == 0x35) {
-		const auto player{ cheatManager.memory->localPlayer };
-		if (const auto player{ cheatManager.memory->localPlayer }; (::GetAsyncKeyState(VK_LCONTROL) & 0x8000) && player) {
-			const auto playerHash{ fnv::hash_runtime(player->get_character_data_stack()->base_skin.model.str) };
-			if (const auto it{ std::find_if(cheatManager.database->specialSkins.begin(), cheatManager.database->specialSkins.end(),
-				[&skin = player->get_character_data_stack()->base_skin.skin, &ph = playerHash](const SkinDatabase::specialSkin& x) noexcept -> bool
-				{
-					return x.champHash == ph && (x.skinIdStart <= skin && x.skinIdEnd >= skin);
-				}) };
-				it != cheatManager.database->specialSkins.end())
-			{
-				const auto stack{ player->get_character_data_stack() };
-				if (stack->base_skin.gear < static_cast<std::int8_t>(it->gears.size()) - 1)
-					++stack->base_skin.gear;
-				else
-					stack->base_skin.gear = static_cast<std::int8_t>(0);
-
-				stack->update(true);
-			}
-		}
-	}
-
 	if (cheatManager.config->quickSkinChange) {
-		if (msg == WM_KEYDOWN && wParam == cheatManager.config->nextSkinKey.getKey()) {
-			if (const auto player{ cheatManager.memory->localPlayer }; player) {
-				const auto& values{ cheatManager.database->champions_skins[fnv::hash_runtime(player->get_character_data_stack()->base_skin.model.str)] };
-				if (++cheatManager.config->current_combo_skin_index > static_cast<std::int32_t>(values.size()))
-					cheatManager.config->current_combo_skin_index = static_cast<std::int32_t>(values.size());
-				if (cheatManager.config->current_combo_skin_index > 0)
-					player->change_skin(values[cheatManager.config->current_combo_skin_index - 1].model_name.c_str(), values[cheatManager.config->current_combo_skin_index - 1].skin_id);
-				cheatManager.config->save();
-			}
-		}
-		else if (msg == WM_KEYDOWN && wParam == cheatManager.config->previousSkinKey.getKey()) {
-			if (const auto player{ cheatManager.memory->localPlayer }; player) {
-				const auto& values{ cheatManager.database->champions_skins[fnv::hash_runtime(player->get_character_data_stack()->base_skin.model.str)] };
-				if (--cheatManager.config->current_combo_skin_index > 0)
-					player->change_skin(values[cheatManager.config->current_combo_skin_index - 1].model_name.c_str(), values[cheatManager.config->current_combo_skin_index - 1].skin_id);
-				else
-					cheatManager.config->current_combo_skin_index = 1;
-				cheatManager.config->save();
-			}
-		}
+		if (msg == WM_KEYDOWN && wParam == cheatManager.config->nextSkinKey.getKey())
+			nextSkin();
+		if (msg == WM_KEYDOWN && wParam == cheatManager.config->previousSkinKey.getKey())
+			previousSkin();
 	}
 
 	return ::CallWindowProcW(originalWndProc, window, msg, wParam, lParam);
@@ -84,11 +72,29 @@ std::unique_ptr<::vmt_smart_hook> swap_chain_vmt{ nullptr };
 
 static const ImWchar ranges[] = {
 	0x0020, 0x00FF, // Basic Latin + Latin Supplement
+	0x2000, 0x206F, // General Punctuation
+	0x3000, 0x30FF, // CJK Symbols and Punctuations, Hiragana, Katakana
+	0x31F0, 0x31FF, // Katakana Phonetic Extensions
+	0xFF00, 0xFFEF, // Half-width characters
+	0x4e00, 0x9FAF, // CJK Ideograms
+	0x3131, 0x3163, // Korean alphabets
+	0xAC00, 0xD7A3, // Korean characters
+	0x0400, 0x052F, // Cyrillic + Cyrillic Supplement
+	0x2DE0, 0x2DFF, // Cyrillic Extended-A
+	0xA640, 0xA69F, // Cyrillic Extended-B
+	0x2010, 0x205E, // Punctuations
+	0x0E00, 0x0E7F, // Thai
 	0x0100, 0x024F, // Latin Extended-A + Latin Extended-B
+	0x0102, 0x0103,
+	0x0110, 0x0111,
+	0x0128, 0x0129,
+	0x0168, 0x0169,
+	0x01A0, 0x01A1,
+	0x01AF, 0x01B0,	
 	0x0300, 0x03FF, // Combining Diacritical Marks + Greek/Coptic
 	0x0400, 0x044F, // Cyrillic
 	0x0600, 0x06FF, // Arabic
-	0x0E00, 0x0E7F, // Thai
+	0x1EA0, 0x1EF9,
 	0,
 };
 
@@ -227,8 +233,7 @@ namespace d3d_vtable {
 			create_render_target();
 			::ImGui_ImplDX11_Init(d3d11_device, d3d11_device_context);
 			::ImGui_ImplDX11_CreateDeviceObjects();
-		}
-		else
+		} else
 			::ImGui_ImplDX9_Init(reinterpret_cast<IDirect3DDevice9*>(device));
 
 		originalWndProc = WNDPROC(::SetWindowLongW(cheatManager.memory->getRiotWindow(), GWLP_WNDPROC, LONG_PTR(&wndProc)));
@@ -253,8 +258,7 @@ namespace d3d_vtable {
 				if (is_d3d11) {
 					d3d11_device_context->OMSetRenderTargets(1, &main_render_target_view, NULL);
 					::ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-				}
-				else {
+				} else {
 					unsigned long colorwrite, srgbwrite;
 					const auto dvc{ reinterpret_cast<IDirect3DDevice9*>(device) };
 					dvc->GetRenderState(D3DRS_COLORWRITEENABLE, &colorwrite);
@@ -353,7 +357,7 @@ void Hooks::init() const noexcept
 				hero->change_skin(values[config_entry->second - 1].model_name.c_str(), values[config_entry->second - 1].skin_id);
 			}
 		}
-		});
+	});
 
 	for (auto i{ 0u }; i < heroes->length; ++i) {
 		if (const auto hero{ heroes->list[i] }; hero->get_character_data_stack()->stack.size() > 0) {
@@ -382,7 +386,7 @@ void Hooks::init() const noexcept
 	static const auto change_skin_for_object = [](AIBaseCommon* obj, const std::int32_t skin) noexcept -> void {
 		if (skin == -1)
 			return;
-
+		
 		if (const auto stack{ obj->get_character_data_stack() }; stack->base_skin.skin != skin) {
 			stack->base_skin.skin = skin;
 			stack->update(true);
@@ -413,11 +417,9 @@ void Hooks::init() const noexcept
 						change_skin_for_object(minion, cheatManager.config->current_ward_skin_index);
 				}
 				continue;
-			}
-			else if (hash == FNV("DominationScout")) continue;
+			} else if (hash == FNV("DominationScout")) continue;
 			change_skin_for_object(minion, owner->get_character_data_stack()->base_skin.skin);
-		}
-		else {
+		} else {
 			// Just LocalPlayer
 			if ((hash == FNV("NunuSnowball") && playerHash == FNV("Nunu")) ||
 				(hash == FNV("KindredWolf") && playerHash == FNV("Kindred")) ||
@@ -432,8 +434,7 @@ void Hooks::init() const noexcept
 					change_skin_for_object(minion, cheatManager.config->current_minion_skin_index * 2 + 1);
 				else
 					change_skin_for_object(minion, cheatManager.config->current_minion_skin_index * 2);
-			}
-			else {
+			} else {
 				const auto config_entry{ cheatManager.config->current_combo_jungle_mob_skin_index.find(fnv::hash_runtime(minion->get_character_data_stack()->base_skin.model.str)) };
 				if (config_entry == cheatManager.config->current_combo_jungle_mob_skin_index.end() || config_entry->second == 0)
 					continue;
@@ -449,8 +450,7 @@ void Hooks::install() const noexcept
 		d3d_device_vmt = std::make_unique<::vmt_smart_hook>(cheatManager.memory->d3dDevice);
 		d3d_device_vmt->apply_hook<d3d_vtable::end_scene>(42);
 		d3d_device_vmt->apply_hook<d3d_vtable::reset>(16);
-	}
-	else if (cheatManager.memory->swapChain) {
+	} else if (cheatManager.memory->swapChain) {
 		swap_chain_vmt = std::make_unique<::vmt_smart_hook>(cheatManager.memory->swapChain);
 		swap_chain_vmt->apply_hook<d3d_vtable::dxgi_present>(8);
 		swap_chain_vmt->apply_hook<d3d_vtable::dxgi_resize_buffers>(13);
