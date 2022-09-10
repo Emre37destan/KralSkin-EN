@@ -1,0 +1,24 @@
+name: Windows
+
+on: [push, pull_request]
+
+jobs:
+  Riot-Games-Servers:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.1
+    - name: Build
+      shell: cmd
+      run: msbuild KralSkin/KralSkin.vcxproj /p:Platform=x86 /p:Configuration=RiotSunucu
+      
+  China-Server:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.1
+    - name: Build
+      shell: cmd
+      run: msbuild KralSkin/KralSkin.vcxproj /p:Platform=x86 /p:Configuration=ChineSunucu
