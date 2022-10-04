@@ -21,7 +21,7 @@
 - <a href="https://github.com/nlohmann/json">JSON</a> based configuration save and load
 
 # Building
-1. Clone the source with `git clone --recursive https://github.com/Emre37destan/KralSkin-EN.git`
+1. Clone the source with `git clone --recursive https://github.com/Emre37destan/KralSkin-ENN.git`
 2. Build in Visual Studio 2017/19 with "Your Region" configuration
 
 # Use
