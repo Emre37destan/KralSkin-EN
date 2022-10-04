@@ -8,7 +8,7 @@
 [![Issues](https://img.shields.io/github/issues/Emre37destan/KralSkin-EN.svg?style=plastic)](https://github.com/Emre37destan/KralSkin-EN/issues)
 ![Windows](https://github.com/Emre37destan/KralSkin-EN/workflows/Windows/badge.svg?branch=main&event=push)
 # **KralSkin-EN**
-<img src="https://raw.githubusercontent.com/Emre37destan/KralSkin-EN/main/KralSkinEN.png">
+<img src="https://raw.githubusercontent.com/Emre37destan/KralSkin-EN/main/KralSkin-EN.png">
 </div>
 
 `KralSkin-EN` is a built-in skin changer for League of Legends.
